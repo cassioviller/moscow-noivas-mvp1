@@ -13,6 +13,7 @@ import { outboxRouter } from './modules/outbox/outbox.controller.js';
 import { productsRouter } from './modules/products/products.controller.js';
 import { rentalsRouter } from './modules/rentals/rentals.controller.js';
 import { rulesRouter } from './modules/rules/rules.controller.js';
+import { settingsRouter } from './modules/settings/settings.controller.js';
 import { traceabilityRouter } from './modules/traceability/traceability.controller.js';
 import { usersRouter } from './modules/users/users.controller.js';
 
@@ -30,6 +31,7 @@ app.use('/auth', authRouter);
 app.use('/dashboard', dashboardRouter);
 app.use('/users', usersRouter);
 app.use('/rules', rulesRouter);
+app.use('/settings', settingsRouter);
 app.use('/employees', employeesRouter);
 app.use('/crm', crmRouter);
 app.use('/products', productsRouter);

@@ -7,6 +7,7 @@ const emptyDb = {
     if (sql.includes('SELECT nome, capacidade, ativo FROM salas_prova')) return { rowCount: 1, rows: [{ nome: 'Cabine 1', capacidade: 1, ativo: true }] };
     if (sql.includes('count(*)::text AS total')) return { rowCount: 1, rows: [{ total: '0' }] };
     if (sql.includes('SELECT nome, ativo, is_atendente FROM funcionarios')) return { rowCount: 1, rows: [{ nome: 'Maria', ativo: true, is_atendente: true }] };
+    if (sql.includes('SELECT id FROM atendente_horarios')) return { rowCount: 1, rows: [{ id: '44444444-4444-4444-8444-444444444444' }] };
     if (sql.includes('SELECT motivo FROM atendente_bloqueios')) return { rowCount: 0, rows: [] };
     if (sql.includes('SELECT nome, status_geral FROM produtos')) return { rowCount: 1, rows: [{ nome: 'Vestido 102', status_geral: 'disponivel' }] };
     if (sql.includes('SELECT id FROM reservas_estoque')) return { rowCount: 0, rows: [] };

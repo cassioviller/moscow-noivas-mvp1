@@ -1,4 +1,4 @@
-import { Banknote, CalendarDays, CalendarX, ChevronsLeft, ChevronsRight, Clock, HeartHandshake, Home, LayoutGrid, ListChecks, LogOut, Receipt, ScrollText, Settings, ShieldAlert, ShieldCheck, Shirt, Store, UserCog, UserRoundPlus, Users, Workflow } from 'lucide-react';
+import { Banknote, CalendarDays, CalendarX, ChevronsLeft, ChevronsRight, Clock, Database, HeartHandshake, Home, LayoutGrid, ListChecks, LogOut, Receipt, ScrollText, Settings, ShieldAlert, ShieldCheck, Shirt, Store, UserCog, UserRoundPlus, Users, Workflow } from 'lucide-react';
 import type { ElementType } from 'react';
 import { useEffect, useState } from 'react';
 import type { Session } from './api';
@@ -13,6 +13,7 @@ import { RulesPage } from './pages/RulesPage';
 import { TraceabilityPage } from './pages/TraceabilityPage';
 import { UsersPage } from './pages/UsersPage';
 import { EmployeesPage } from './pages/EmployeesPage';
+import { SettingsPage } from './pages/SettingsPage';
 
 type PageKey =
   | 'quick'
@@ -33,6 +34,7 @@ type PageKey =
   | 'usuarios'
   | 'permissoes'
   | 'regras'
+  | 'cadastros'
   | 'funcionarios'
   | 'horarios'
   | 'bloqueios-atendente'
@@ -49,6 +51,7 @@ const navItems: Array<{ key: PageKey; label: string; icon: ElementType; group: s
   { key: 'tasks', label: 'Tarefas', icon: ListChecks, group: 'Operação' },
   { key: 'clients', label: 'Clientes', icon: Users, group: 'Operação' },
   { key: 'regras', label: 'Regras da loja', icon: Settings, group: 'Gestão' },
+  { key: 'cadastros', label: 'Cadastros', icon: Database, group: 'Gestão' },
   { key: 'usuarios', label: 'Usuários', icon: UserRoundPlus, group: 'Gestão' },
   { key: 'history', label: 'Histórico', icon: ScrollText, group: 'Gestão' },
   { key: 'audit', label: 'Auditoria', icon: ShieldAlert, group: 'Gestão' },
@@ -66,7 +69,7 @@ const navItems: Array<{ key: PageKey; label: string; icon: ElementType; group: s
 export function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [page, setPage] = useState<PageKey>('dashboard');
-  const [menuCollapsed, setMenuCollapsed] = useState(() => localStorage.getItem('menuCollapsed') !== 'false');
+  const [menuCollapsed, setMenuCollapsed] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem('session');
@@ -90,6 +93,7 @@ export function App() {
           </div>
           <button
             className="collapse-button"
+            aria-label={menuCollapsed ? 'Expandir menu' : 'Recolher menu'}
             title={menuCollapsed ? 'Expandir menu' : 'Recolher menu'}
             onClick={() => {
               const next = !menuCollapsed;
@@ -101,7 +105,7 @@ export function App() {
           </button>
         </div>
 
-        <nav>
+        <nav aria-label="Navegação principal">
           {groups.map((group) => (
             <div className="nav-group" key={group}>
               <span className="nav-group-title">{group}</span>
@@ -111,6 +115,7 @@ export function App() {
                   <button
                     className={page === item.key ? 'active' : ''}
                     key={item.key}
+                    aria-current={page === item.key ? 'page' : undefined}
                     title={item.label}
                     onClick={() => setPage(item.key)}
                   >
@@ -134,6 +139,7 @@ export function App() {
             <span>{session.user.nome}</span>
             <button
               className="icon-button"
+              aria-label="Sair"
               title="Sair"
               onClick={() => {
                 localStorage.clear();
@@ -145,7 +151,7 @@ export function App() {
           </div>
         </header>
 
-        {page === 'dashboard' && <DashboardPage />}
+        {page === 'dashboard' && <DashboardPage onNavigate={setPage} />}
         {page === 'quick' && <CrmPage mode="quick" />}
         {page === 'kanban' && <CrmPage mode="kanban" />}
         {page === 'leads' && <CrmPage mode="leads" />}
@@ -163,6 +169,7 @@ export function App() {
         {page === 'usuarios' && <UsersPage mode="users" />}
         {page === 'permissoes' && <UsersPage mode="permissions" />}
         {page === 'regras' && <RulesPage />}
+        {page === 'cadastros' && <SettingsPage />}
         {page === 'funcionarios' && <EmployeesPage mode="employees" />}
         {page === 'horarios' && <EmployeesPage mode="schedules" />}
         {page === 'bloqueios-atendente' && <EmployeesPage mode="attendantBlocks" />}

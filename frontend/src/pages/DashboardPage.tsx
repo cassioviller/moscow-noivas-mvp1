@@ -3,7 +3,9 @@ import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 
-export function DashboardPage() {
+type DashboardPageKey = 'quick' | 'agenda' | 'receivables';
+
+export function DashboardPage({ onNavigate }: { onNavigate?: (page: DashboardPageKey) => void }) {
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState('');
 
@@ -33,7 +35,24 @@ export function DashboardPage() {
     );
   }
 
-  if (!data) return <section className="panel">Carregando início...</section>;
+  if (!data) {
+    return (
+      <section className="dashboard">
+        <section className="dashboard-hero">
+          <div>
+            <span className="eyebrow">Preparando a rotina</span>
+            <h2>Carregando a central do dia</h2>
+            <p>Buscando agenda, pendências, noivas em andamento e financeiro.</p>
+          </div>
+          <div className="hero-metrics">
+            <div className="metric-card"><span>Agenda</span><strong>...</strong></div>
+            <div className="metric-card"><span>Noivas</span><strong>...</strong></div>
+            <div className="metric-card"><span>Financeiro</span><strong>...</strong></div>
+          </div>
+        </section>
+      </section>
+    );
+  }
 
   const critical = data.gerente.pendencias_criticas + data.financeiro.caucoes_em_aberto;
 
@@ -44,22 +63,27 @@ export function DashboardPage() {
           <span className="eyebrow">Moscow Noivas MVP 1</span>
           <h2>Rotina da loja organizada para hoje</h2>
           <p>Atendimentos, provas, locações, dinheiro a receber e pendências críticas em uma visão única para demonstração.</p>
+          <div className="dashboard-actions">
+            <button className="primary" onClick={() => onNavigate?.('agenda')}><CalendarDays size={16} /> Abrir agenda</button>
+            <button className="secondary text-button" onClick={() => onNavigate?.('quick')}><HeartHandshake size={16} /> Novo atendimento</button>
+            <button className="secondary text-button" onClick={() => onNavigate?.('receivables')}><Banknote size={16} /> Ver financeiro</button>
+          </div>
         </div>
         <div className="hero-metrics">
-          <MetricCard label="Agenda hoje" value={data.gerente.agendamentos_hoje} icon={CalendarDays} />
-          <MetricCard label="Locações mês" value={data.gerente.locacoes_mes} icon={Receipt} />
+          <MetricCard label="Agenda hoje" value={data.gerente.agendamentos_hoje} icon={CalendarDays} tone="primary" />
+          <MetricCard label="Locações mês" value={data.gerente.locacoes_mes} icon={Receipt} tone="soft" />
           <MetricCard label="Pendências" value={critical} icon={AlertTriangle} tone={critical > 0 ? 'warn' : 'ok'} />
         </div>
       </section>
 
-      <div className="dashboard-grid dashboard-grid-main">
-        <MetricCard label="Leads novos" value={data.gerente.leads_novos} icon={HeartHandshake} />
-        <MetricCard label="Próximas provas" value={data.vendedora.proximas_provas} icon={CheckCircle2} />
-        <MetricCard label="Parcelas vencidas" value={data.financeiro.parcelas_vencidas} icon={Banknote} tone={data.financeiro.parcelas_vencidas > 0 ? 'warn' : 'ok'} />
-        <MetricCard label="Cauções em aberto" value={data.financeiro.caucoes_em_aberto} icon={Banknote} tone={data.financeiro.caucoes_em_aberto > 0 ? 'warn' : 'ok'} />
-        <MetricCard label="Retiradas próximas" value={data.financeiro.retiradas_proximas} icon={Receipt} />
-        <MetricCard label="Conflitos evitados" value={data.gerente.conflitos_evitados} icon={Sparkles} />
-      </div>
+      <section className="operations-strip" aria-label="Indicadores operacionais">
+        <CompactSignal label="Leads novos" value={data.gerente.leads_novos} icon={<HeartHandshake size={18} />} />
+        <CompactSignal label="Próximas provas" value={data.vendedora.proximas_provas} icon={<CheckCircle2 size={18} />} />
+        <CompactSignal label="Parcelas vencidas" value={data.financeiro.parcelas_vencidas} icon={<Banknote size={18} />} tone={data.financeiro.parcelas_vencidas > 0 ? 'warn' : 'ok'} />
+        <CompactSignal label="Cauções abertas" value={data.financeiro.caucoes_em_aberto} icon={<Banknote size={18} />} tone={data.financeiro.caucoes_em_aberto > 0 ? 'warn' : 'ok'} />
+        <CompactSignal label="Retiradas próximas" value={data.financeiro.retiradas_proximas} icon={<Receipt size={18} />} />
+        <CompactSignal label="Conflitos evitados" value={data.gerente.conflitos_evitados} icon={<Sparkles size={18} />} />
+      </section>
 
       <section className="dashboard-columns">
         <DashboardList
@@ -151,10 +175,20 @@ export function DashboardPage() {
   );
 }
 
-function MetricCard({ label, value, icon: Icon, tone }: { label: string; value: number; icon: any; tone?: 'warn' | 'ok' }) {
+function MetricCard({ label, value, icon: Icon, tone }: { label: string; value: number; icon: any; tone?: 'primary' | 'soft' | 'warn' | 'ok' }) {
   return (
     <article className={`metric-card ${tone ? `metric-${tone}` : ''}`}>
       <Icon size={18} />
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </article>
+  );
+}
+
+function CompactSignal({ label, value, icon, tone }: { label: string; value: number; icon: ReactNode; tone?: 'warn' | 'ok' }) {
+  return (
+    <article className={`compact-signal ${tone ? `compact-${tone}` : ''}`}>
+      <span className="compact-icon">{icon}</span>
       <span>{label}</span>
       <strong>{value}</strong>
     </article>

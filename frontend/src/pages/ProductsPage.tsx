@@ -26,11 +26,20 @@ export function ProductsPage() {
   const [view, setView] = useState<'grid' | 'table'>('grid');
   const [selected, setSelected] = useState<string | null>(null);
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   async function load() {
-    const [productRows, categoryRows] = await Promise.all([api<Product[]>('/products'), api<Category[]>('/products/categories')]);
-    setProducts(productRows);
-    setCategories(categoryRows);
+    setError('');
+    try {
+      const [productRows, categoryRows] = await Promise.all([api<Product[]>('/products'), api<Category[]>('/products/categories')]);
+      setProducts(productRows);
+      setCategories(categoryRows);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Nao foi possivel carregar vestidos.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -68,12 +77,12 @@ export function ProductsPage() {
             <p>Consulte vestidos, disponibilidade e reservas.</p>
           </div>
           <div className="segmented">
-            <button className={view === 'grid' ? 'active' : ''} onClick={() => setView('grid')} title="Grid de vestidos"><Shirt size={17} /></button>
-            <button className={view === 'table' ? 'active' : ''} onClick={() => setView('table')} title="Tabela"><Table2 size={17} /></button>
+            <button aria-label="Ver vestidos em grid" className={view === 'grid' ? 'active' : ''} onClick={() => setView('grid')} title="Grid de vestidos"><Shirt size={17} /></button>
+            <button aria-label="Ver vestidos em tabela" className={view === 'table' ? 'active' : ''} onClick={() => setView('table')} title="Tabela"><Table2 size={17} /></button>
           </div>
         </div>
         {message && <div className="alert success-box">{message}</div>}
-        {view === 'grid'
+        {error ? <div className="alert error">Nao foi possivel carregar os vestidos. {error}</div> : loading ? <div className="loading-state">Carregando vestidos, fotos e categorias...</div> : view === 'grid'
           ? <ProductGrid products={products} onView={setSelected} onAction={setMessage} />
           : <ProductTable products={products} onView={setSelected} />}
       </div>
@@ -95,7 +104,7 @@ export function ProductsPage() {
 }
 
 function ProductGrid({ products, onView, onAction }: { products: Product[]; onView: (id: string) => void; onAction: (message: string) => void }) {
-  if (products.length === 0) return <div className="empty">Nenhum vestido cadastrado.</div>;
+  if (products.length === 0) return <div className="empty">Nenhum vestido cadastrado. Cadastre o primeiro item para acompanhar disponibilidade e reservas.</div>;
 
   return (
     <div className="product-grid">
@@ -109,10 +118,10 @@ function ProductGrid({ products, onView, onAction }: { products: Product[]; onVi
             <p>{product.codigo_interno} · {product.tamanho || 'Tamanho nao informado'} · {product.cor || 'Cor nao informada'}</p>
             <strong>R$ {money(product.valor_locacao)}</strong>
           </div>
-          <span className="badge success">{product.status_geral}</span>
+          <span className={`badge ${statusTone(product.status_geral)}`}>{label(product.status_geral)}</span>
           <div className="actions">
-            <button className="secondary" title="Ver" onClick={() => onView(product.id)}><Eye size={16} /></button>
-            <button className="secondary" title="Agendar prova" onClick={() => onAction('Abra a Agenda para marcar uma prova com este vestido.') }><CalendarPlus size={16} /></button>
+            <button aria-label={`Ver detalhes de ${product.nome}`} className="secondary" title="Ver" onClick={() => onView(product.id)}><Eye size={16} /></button>
+            <button aria-label={`Agendar prova com ${product.nome}`} className="secondary" title="Agendar prova" onClick={() => onAction('Abra a Agenda para marcar uma prova com este vestido.') }><CalendarPlus size={16} /></button>
             <button className="secondary text-button" onClick={() => onAction('Use Nova locacao para criar uma reserva contratual deste vestido.')}>Reservar</button>
           </div>
         </article>
@@ -133,7 +142,7 @@ function ProductTable({ products, onView }: { products: Product[]; onView: (id: 
             <td>{product.tamanho}</td>
             <td>{product.cor}</td>
             <td>R$ {money(product.valor_locacao)}</td>
-            <td>{product.status_geral}</td>
+            <td><span className={`badge ${statusTone(product.status_geral)}`}>{label(product.status_geral)}</span></td>
             <td><button className="secondary text-button" onClick={() => onView(product.id)}>Ver detalhes</button></td>
           </tr>
         ))}
@@ -162,14 +171,14 @@ function ProductDetail({ productId, onClose }: { productId: string; onClose: () 
           <button className="secondary text-button" onClick={onClose}>Fechar</button>
         </div>
         <div className="detail-grid">
-          <div className="metric"><span>Status</span><strong>{data.produto.status_geral}</strong></div>
+          <div className="metric"><span>Status</span><strong>{label(data.produto.status_geral)}</strong></div>
           <div className="metric"><span>Locacao</span><strong>R$ {money(data.produto.valor_locacao)}</strong></div>
           <div className="metric"><span>Reservas</span><strong>{data.reservas.length}</strong></div>
           <div className="metric"><span>Agenda</span><strong>{data.agenda.length}</strong></div>
         </div>
         <h3>Reservas e bloqueios</h3>
         {data.reservas.length === 0 ? <div className="empty compact">Nenhuma reserva para este vestido.</div> : data.reservas.map((row: any) => (
-          <article className="mini-card" key={row.id}><strong>{row.tipo_bloqueio}</strong><span>{new Date(row.inicio_at).toLocaleString('pt-BR')} ate {new Date(row.fim_at).toLocaleString('pt-BR')} · {row.status}</span></article>
+          <article className="mini-card" key={row.id}><strong>{label(row.tipo_bloqueio)}</strong><span>{new Date(row.inicio_at).toLocaleString('pt-BR')} ate {new Date(row.fim_at).toLocaleString('pt-BR')} · {label(row.status)}</span></article>
         ))}
       </aside>
     </div>
@@ -178,4 +187,14 @@ function ProductDetail({ productId, onClose }: { productId: string; onClose: () 
 
 function money(value: string | number) {
   return Number(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+}
+
+function label(value: string) {
+  return String(value || '').replaceAll('_', ' ');
+}
+
+function statusTone(status: string) {
+  if (['disponivel', 'ativo'].includes(status)) return 'success';
+  if (['manutencao'].includes(status)) return 'warning-badge';
+  return 'muted';
 }

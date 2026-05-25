@@ -1,4 +1,4 @@
-import { Banknote, CalendarDays, CalendarX, ChevronsLeft, ChevronsRight, Clock, Database, HeartHandshake, Home, LayoutGrid, ListChecks, LogOut, Receipt, ScrollText, Settings, ShieldAlert, ShieldCheck, Shirt, Store, UserCog, UserRoundPlus, Users, Workflow } from 'lucide-react';
+import { Banknote, CalendarDays, CalendarX, ChevronsLeft, ChevronsRight, Clock, Database, HeartHandshake, Home, LayoutGrid, ListChecks, LogOut, Receipt, ScrollText, Search, Settings, ShieldAlert, ShieldCheck, Shirt, Store, UserCog, UserRoundPlus, Users, Workflow } from 'lucide-react';
 import type { ElementType } from 'react';
 import { useEffect, useState } from 'react';
 import type { Session } from './api';
@@ -66,6 +66,32 @@ const navItems: Array<{ key: PageKey; label: string; icon: ElementType; group: s
   { key: 'bloqueios-loja', label: 'Bloqueios da loja', icon: Store, group: 'Apoio' }
 ];
 
+const pageContext: Record<PageKey, string> = {
+  quick: 'Entrada rápida para novos contatos e próximas ações.',
+  dashboard: 'Central do dia com agenda, pendências e financeiro.',
+  kanban: 'Funil comercial das noivas em atendimento.',
+  leads: 'Lista completa de interessadas antes da conversão.',
+  clients: 'Clientes convertidas para locações e acompanhamento.',
+  tasks: 'Retornos, prioridades e prazos da equipe.',
+  products: 'Vestidos, categorias, status e ações principais.',
+  agenda: 'Provas, cabines, vendedoras e vestidos por horário.',
+  reservations: 'Reservas que bloqueiam disponibilidade de vestidos.',
+  rentals: 'Contratos, itens, retirada, devolução e caução.',
+  receivables: 'Parcelas, vencimentos, saldos e pagamentos.',
+  history: 'Histórico operacional dos atendimentos e locações.',
+  audit: 'Rastreabilidade de ações sensíveis no sistema.',
+  lgpd: 'Consentimentos, solicitações e retenção de dados.',
+  outbox: 'Eventos internos aguardando processamento.',
+  usuarios: 'Acessos, usuários ativos e segurança da loja.',
+  permissoes: 'Perfis e permissões por módulo.',
+  regras: 'Configurações e regras operacionais da loja.',
+  cadastros: 'Opções editáveis usadas em campos de dropdown.',
+  funcionarios: 'Equipe, atendentes e papéis operacionais.',
+  horarios: 'Janelas de atendimento por vendedora.',
+  'bloqueios-atendente': 'Indisponibilidades específicas da equipe.',
+  'bloqueios-loja': 'Bloqueios gerais da loja e agenda.'
+};
+
 export function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [page, setPage] = useState<PageKey>('dashboard');
@@ -81,6 +107,8 @@ export function App() {
   }
 
   const groups = Array.from(new Set(navItems.map((item) => item.group)));
+  const activeItem = navItems.find((item) => item.key === page);
+  const ActiveIcon = activeItem?.icon ?? Home;
 
   return (
     <div className={`shell ${menuCollapsed ? 'nav-collapsed' : ''}`}>
@@ -89,7 +117,7 @@ export function App() {
           <span className="brand-mark">MN</span>
           <div>
             <strong>Moscow Noivas</strong>
-            <small>Gestão da loja</small>
+            <small>Atelier operacional</small>
           </div>
           <button
             className="collapse-button"
@@ -131,23 +159,33 @@ export function App() {
 
       <main>
         <header className="topbar">
-          <div>
+          <div className="topbar-heading">
             <span className="eyebrow">Base MVP 1</span>
-            <h1>{navItems.find((item) => item.key === page)?.label}</h1>
+            <div className="topbar-title-row">
+              <span className="topbar-page-icon"><ActiveIcon size={20} /></span>
+              <h1>{activeItem?.label}</h1>
+            </div>
+            <p>{pageContext[page]}</p>
           </div>
-          <div className="user-box">
-            <span>{session.user.nome}</span>
-            <button
-              className="icon-button"
-              aria-label="Sair"
-              title="Sair"
-              onClick={() => {
-                localStorage.clear();
-                setSession(null);
-              }}
-            >
-              <LogOut size={18} />
-            </button>
+          <div className="topbar-actions">
+            <div className="command-chip" aria-label="Busca visual">
+              <Search size={15} />
+              <span>Buscar noivas, vestidos, locações</span>
+            </div>
+            <div className="user-box">
+              <span>{session.user.nome}</span>
+              <button
+                className="icon-button"
+                aria-label="Sair"
+                title="Sair"
+                onClick={() => {
+                  localStorage.clear();
+                  setSession(null);
+                }}
+              >
+                <LogOut size={18} />
+              </button>
+            </div>
           </div>
         </header>
 

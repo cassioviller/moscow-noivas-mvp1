@@ -22,9 +22,18 @@ export function RentalsPage({ mode }: { mode: 'rentals' | 'receivables' }) {
 function Rentals() {
   const [rentals, setRentals] = useState<Rental[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   async function load() {
-    setRentals(await api<Rental[]>('/rentals'));
+    setError('');
+    try {
+      setRentals(await api<Rental[]>('/rentals'));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Nao foi possivel carregar locacoes.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -41,17 +50,17 @@ function Rentals() {
           </div>
           <Receipt size={22} />
         </div>
-        {rentals.length === 0 ? <div className="empty">Nenhuma locação criada ainda.</div> : (
+        {error ? <div className="alert error">Nao foi possivel carregar locações. {error}</div> : loading ? <div className="loading-state">Carregando locações, contratos e datas...</div> : rentals.length === 0 ? <div className="empty">Nenhuma locação criada ainda. Crie a primeira locação para controlar contrato, reservas e parcelas.</div> : (
           <table>
             <thead><tr><th>Cliente</th><th>Evento</th><th>Itens</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead>
             <tbody>
               {rentals.map((rental) => (
                 <tr key={rental.id}>
                   <td>{rental.cliente_nome}</td>
-                  <td>{rental.data_evento}</td>
+                  <td>{formatDate(rental.data_evento)}</td>
                   <td>{rental.total_itens}</td>
                   <td>R$ {money(rental.valor_total)}</td>
-                  <td><span className="badge success">{rental.status}</span></td>
+                  <td><span className={`badge ${statusTone(rental.status)}`}>{label(rental.status)}</span></td>
                   <td><button className="secondary text-button" onClick={() => setSelected(rental.id)}>Ver detalhes</button></td>
                 </tr>
               ))}
@@ -69,12 +78,14 @@ function NewRentalWizard({ onCreated }: { onCreated: () => void }) {
   const [products, setProducts] = useState<any[]>([]);
   const [message, setMessage] = useState('');
   const [conflicts, setConflicts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     Promise.all([api<any[]>('/crm/clients'), api<any[]>('/products')]).then(([c, p]) => {
       setClients(c);
       setProducts(p);
-    }).catch(console.error);
+    }).catch((err) => setError(err instanceof Error ? err.message : 'Nao foi possivel preparar a locacao.')).finally(() => setLoading(false));
   }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -121,6 +132,8 @@ function NewRentalWizard({ onCreated }: { onCreated: () => void }) {
       <div className="wizard-steps">
         <span>1 Cliente</span><span>2 Itens</span><span>3 Datas</span><span>4 Valores</span><span>5 Contrato</span><span>6 Confirmação</span>
       </div>
+      {error && <div className="alert error">Nao foi possivel carregar clientes e vestidos. {error}</div>}
+      {loading && <div className="loading-state">Preparando clientes e vestidos disponíveis...</div>}
       <label>Cliente<select name="cliente_id" required><option value="">Selecione</option>{clients.map((client) => <option key={client.id} value={client.id}>{client.nome}</option>)}</select></label>
       <label>Data do evento<input name="data_evento" type="date" required /></label>
       <label>Vestido/item<select name="produto_id"><option value="">Item sem produto</option>{products.map((product) => <option key={product.id} value={product.id}>{product.nome}</option>)}</select></label>
@@ -162,7 +175,7 @@ function RentalDetail({ id, onChanged }: { id: string; onChanged: () => void }) 
           <h2>{data.locacao.cliente_nome}</h2>
           <p>Evento em {data.locacao.data_evento} · R$ {money(data.locacao.valor_total)}</p>
         </div>
-        <span className="badge success">{data.locacao.status}</span>
+        <span className={`badge ${statusTone(data.locacao.status)}`}>{label(data.locacao.status)}</span>
       </div>
       <div className="tabs">{tabs.map((name) => <button key={name} className={tab === name ? 'active' : ''} onClick={() => setTab(name)}>{name}</button>)}</div>
       {tab === 'Resumo' && <Summary data={data} />}
@@ -321,7 +334,18 @@ function History({ data }: { data: any }) {
 
 function Receivables() {
   const [rows, setRows] = useState<any[]>([]);
-  async function load() { setRows(await api<any[]>('/rentals/receivables')); }
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  async function load() {
+    setError('');
+    try {
+      setRows(await api<any[]>('/rentals/receivables'));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Nao foi possivel carregar contas a receber.');
+    } finally {
+      setLoading(false);
+    }
+  }
   useEffect(() => { load().catch(console.error); }, []);
   async function pay(row: any) {
     const value = Number(prompt('Valor pago', row.valor_saldo));
@@ -331,8 +355,8 @@ function Receivables() {
   }
   return <section className="panel wide">
     <div className="section-title"><div><h2>Dinheiro a receber</h2><p>Parcelas, sinal, pagamentos parciais e saldos.</p></div><Banknote size={22} /></div>
-    {rows.length === 0 ? <div className="empty">Nenhuma conta a receber.</div> : <table><thead><tr><th>Cliente</th><th>Locação</th><th>Tipo</th><th>Parcela</th><th>Original</th><th>Pago</th><th>Saldo</th><th>Vencimento</th><th>Status</th><th>Ações</th></tr></thead><tbody>
-      {rows.map((row) => <tr key={row.id}><td>{row.cliente_nome}</td><td>{row.venda_locacao_id.slice(0, 8)}</td><td>{row.tipo}</td><td>{row.parcela_numero}</td><td>R$ {money(row.valor_original)}</td><td>R$ {money(row.valor_pago)}</td><td>R$ {money(row.valor_saldo)}</td><td>{row.vencimento}</td><td>{row.status}</td><td><button className="secondary" title="Registrar pagamento" onClick={() => pay(row)}><CheckCircle2 size={16} /></button></td></tr>)}
+    {error ? <div className="alert error">Nao foi possivel carregar contas a receber. {error}</div> : loading ? <div className="loading-state">Carregando parcelas, saldos e vencimentos...</div> : rows.length === 0 ? <div className="empty">Nenhuma conta a receber. Quando uma locação for criada, as parcelas aparecerão aqui.</div> : <table><thead><tr><th>Cliente</th><th>Locação</th><th>Tipo</th><th>Parcela</th><th>Original</th><th>Pago</th><th>Saldo</th><th>Vencimento</th><th>Status</th><th>Ações</th></tr></thead><tbody>
+      {rows.map((row) => <tr key={row.id}><td>{row.cliente_nome}</td><td>{row.venda_locacao_id.slice(0, 8)}</td><td>{label(row.tipo)}</td><td>{row.parcela_numero}</td><td>R$ {money(row.valor_original)}</td><td>R$ {money(row.valor_pago)}</td><td>R$ {money(row.valor_saldo)}</td><td>{formatDate(row.vencimento)}</td><td><span className={`badge ${statusTone(row.status)}`}>{label(row.status)}</span></td><td><button aria-label={`Registrar pagamento de ${row.cliente_nome}`} className="secondary" title="Registrar pagamento" onClick={() => pay(row)}><CheckCircle2 size={16} /></button></td></tr>)}
     </tbody></table>}
   </section>;
 }
@@ -343,4 +367,19 @@ function Metric({ label, value }: { label: string; value: string }) {
 
 function money(value: string | number) {
   return Number(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+}
+
+function label(value: string) {
+  return String(value || '').replaceAll('_', ' ');
+}
+
+function formatDate(value?: string) {
+  return value ? new Date(value).toLocaleDateString('pt-BR') : '-';
+}
+
+function statusTone(status: string) {
+  if (['ativa', 'ativo', 'pago', 'confirmado', 'retirado', 'devolvido'].includes(status)) return 'success';
+  if (['vencido', 'atrasado', 'pendente'].includes(status)) return 'warning-badge';
+  if (['cancelado'].includes(status)) return 'danger-badge';
+  return 'muted';
 }

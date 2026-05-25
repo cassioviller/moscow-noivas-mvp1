@@ -117,6 +117,8 @@ function Agenda() {
   const [availability, setAvailability] = useState<AvailabilityOptions>({ salas: [], atendentes: [], vestidos: [] });
   const [conflicts, setConflicts] = useState<any[]>([]);
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [view, setView] = useState('dia');
   const [date, setDate] = useState(toDateInput());
   const [startTime, setStartTime] = useState('10:00');
@@ -132,20 +134,27 @@ function Agenda() {
   const fimAt = useMemo(() => toLocalIso(date, endTime), [date, endTime]);
 
   async function load() {
-    const [appointmentRows, leadRows, clientRows, roomRows, employeeRows, productRows] = await Promise.all([
-      api<Appointment[]>('/agenda/appointments'),
-      api<any[]>('/crm/leads'),
-      api<any[]>('/crm/clients'),
-      api<any[]>('/agenda/rooms'),
-      api<any[]>('/employees'),
-      api<any[]>('/products')
-    ]);
-    setAppointments(appointmentRows);
-    setLeads(leadRows.map((lead) => ({ id: lead.id, nome: lead.nome })));
-    setClients(clientRows.map((client) => ({ id: client.id, nome: client.nome })));
-    setRooms(roomRows.map((room) => ({ id: room.id, nome: room.nome })));
-    setEmployees(employeeRows.filter((employee) => employee.is_atendente).map((employee) => ({ id: employee.id, nome: employee.nome })));
-    setProducts(productRows.map((product) => ({ id: product.id, nome: product.nome })));
+    setError('');
+    try {
+      const [appointmentRows, leadRows, clientRows, roomRows, employeeRows, productRows] = await Promise.all([
+        api<Appointment[]>('/agenda/appointments'),
+        api<any[]>('/crm/leads'),
+        api<any[]>('/crm/clients'),
+        api<any[]>('/agenda/rooms'),
+        api<any[]>('/employees'),
+        api<any[]>('/products')
+      ]);
+      setAppointments(appointmentRows);
+      setLeads(leadRows.map((lead) => ({ id: lead.id, nome: lead.nome })));
+      setClients(clientRows.map((client) => ({ id: client.id, nome: client.nome })));
+      setRooms(roomRows.map((room) => ({ id: room.id, nome: room.nome })));
+      setEmployees(employeeRows.filter((employee) => employee.is_atendente).map((employee) => ({ id: employee.id, nome: employee.nome })));
+      setProducts(productRows.map((product) => ({ id: product.id, nome: product.nome })));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Nao foi possivel carregar a agenda.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function loadAvailability() {
@@ -230,20 +239,20 @@ function Agenda() {
             <p>Veja e organize atendimentos, provas, retiradas e devoluções.</p>
           </div>
           <div className="segmented">
-            {['dia', 'semana', 'mês', 'lista'].map((item) => <button key={item} className={view === item ? 'active' : ''} onClick={() => setView(item)}>{item}</button>)}
+            {['dia', 'semana', 'mês', 'lista'].map((item) => <button aria-label={`Ver agenda por ${item}`} key={item} className={view === item ? 'active' : ''} onClick={() => setView(item)}>{item}</button>)}
           </div>
         </div>
-        {appointments.length === 0 ? <div className="empty">Nenhum atendimento marcado para hoje.</div> : (
+        {error ? <div className="alert error">Nao foi possivel carregar a agenda. {error}</div> : loading ? <div className="loading-state">Carregando provas, vendedoras, cabines e vestidos...</div> : appointments.length === 0 ? <div className="empty">Nenhum atendimento marcado para hoje. Escolha dia, horário e recursos para marcar a primeira prova.</div> : (
           <div className="agenda-list">
             {appointments.map((appointment) => (
               <article className="agenda-card" key={appointment.id}>
                 <CalendarCheck size={20} />
                 <div>
                   <strong>{new Date(appointment.inicio_at).toLocaleString('pt-BR')} - {new Date(appointment.fim_at).toLocaleTimeString('pt-BR')}</strong>
-                  <p>{appointment.cliente_nome || appointment.lead_nome} · {appointment.tipo} · {appointment.sala_nome || 'Sem cabine'} · {appointment.atendente_nome || 'Sem vendedora'}</p>
+                  <p>{appointment.cliente_nome || appointment.lead_nome} · {label(appointment.tipo)} · {appointment.sala_nome || 'Sem cabine'} · {appointment.atendente_nome || 'Sem vendedora'}</p>
                   <small>{appointment.vestidos?.join(', ')}</small>
                 </div>
-                <span className="badge success">{appointment.status}</span>
+                <span className={`badge ${statusTone(appointment.status)}`}>{label(appointment.status)}</span>
                 <div className="actions">
                   <button className="secondary text-button" onClick={() => updateStatus(appointment.id, 'confirmado')}>Confirmar</button>
                   <button className="secondary text-button" onClick={() => updateStatus(appointment.id, 'compareceu')}>Compareceu</button>
@@ -305,9 +314,14 @@ function Agenda() {
 
 function Reservations() {
   const [rows, setRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    api<any[]>('/agenda/reservations').then(setRows).catch(console.error);
+    api<any[]>('/agenda/reservations')
+      .then(setRows)
+      .catch((err) => setError(err instanceof Error ? err.message : 'Nao foi possivel carregar reservas.'))
+      .finally(() => setLoading(false));
   }, []);
 
   return (
@@ -319,7 +333,7 @@ function Reservations() {
         </div>
         <Calendar size={22} />
       </div>
-      {rows.length === 0 ? <div className="empty">Nenhuma reserva cadastrada.</div> : (
+      {error ? <div className="alert error">Nao foi possivel carregar reservas. {error}</div> : loading ? <div className="loading-state">Carregando reservas e bloqueios de estoque...</div> : rows.length === 0 ? <div className="empty">Nenhuma reserva cadastrada. Reservas aparecerão aqui depois de uma prova ou locação.</div> : (
         <table>
           <thead><tr><th>Vestido</th><th>Cliente</th><th>Início</th><th>Fim</th><th>Tipo</th><th>Status</th></tr></thead>
           <tbody>
@@ -329,8 +343,8 @@ function Reservations() {
                 <td>{row.cliente_nome}</td>
                 <td>{new Date(row.inicio_at).toLocaleString('pt-BR')}</td>
                 <td>{new Date(row.fim_at).toLocaleString('pt-BR')}</td>
-                <td>{row.tipo_bloqueio}</td>
-                <td>{row.status}</td>
+                <td>{label(row.tipo_bloqueio)}</td>
+                <td><span className={`badge ${statusTone(row.status)}`}>{label(row.status)}</span></td>
               </tr>
             ))}
           </tbody>
@@ -338,4 +352,15 @@ function Reservations() {
       )}
     </section>
   );
+}
+
+function label(value: string) {
+  return String(value || '').replaceAll('_', ' ');
+}
+
+function statusTone(status: string) {
+  if (['confirmado', 'ativa', 'convertida'].includes(status)) return 'success';
+  if (['pendente', 'aguardando'].includes(status)) return 'warning-badge';
+  if (['cancelado', 'expirada'].includes(status)) return 'danger-badge';
+  return 'muted';
 }

@@ -129,9 +129,18 @@ function LeadKanban() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   async function load() {
-    setLeads(await api<Lead[]>('/crm/leads'));
+    setError('');
+    try {
+      setLeads(await api<Lead[]>('/crm/leads'));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Nao foi possivel carregar as noivas.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -155,6 +164,8 @@ function LeadKanban() {
   return (
     <>
       {message && <div className="alert success-box">{message}</div>}
+      {error && <div className="alert error">Nao foi possivel carregar o funil. {error}</div>}
+      {loading && <div className="panel loading-state">Carregando noivas e etapas do funil...</div>}
       <section className="kanban">
         {funnelStatuses.map((column) => {
           const columnLeads = leads.filter((lead) => lead.status === column);
@@ -179,7 +190,8 @@ function LeadKanban() {
                 >
                   <strong>{lead.nome}</strong>
                   <span>{lead.telefone}</span>
-                  <small>{lead.data_evento || 'Sem data do evento'}</small>
+                  <small>{lead.interesse || 'Sem interesse informado'} · evento {formatDate(lead.data_evento)}</small>
+                  <span className="badge muted">{labelText(lead.status)}</span>
                   <div className="actions">
                     <button className="secondary text-button" onClick={() => setSelected(lead.id)}>Ver detalhes</button>
                   </div>
@@ -198,9 +210,18 @@ function LeadKanban() {
 function LeadList() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   async function load() {
-    setLeads(await api<Lead[]>('/crm/leads'));
+    setError('');
+    try {
+      setLeads(await api<Lead[]>('/crm/leads'));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Nao foi possivel carregar noivas.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -214,6 +235,8 @@ function LeadList() {
       icon={<Search size={22} />}
       rows={leads}
       columns={['nome', 'telefone', 'interesse', 'data_evento', 'status', 'responsavel_nome']}
+      loading={loading}
+      error={error}
       onView={(row) => setSelected(row.id)}
     />
     {selected && <LeadDetail leadId={selected} onClose={() => setSelected(null)} onChanged={load} />}
@@ -222,9 +245,14 @@ function LeadList() {
 
 function Clients() {
   const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    api<Client[]>('/crm/clients').then(setClients).catch(console.error);
+    api<Client[]>('/crm/clients')
+      .then(setClients)
+      .catch((err) => setError(err instanceof Error ? err.message : 'Nao foi possivel carregar clientes.'))
+      .finally(() => setLoading(false));
   }, []);
 
   return <DataPanel
@@ -233,15 +261,26 @@ function Clients() {
     icon={<UserRoundPlus size={22} />}
     rows={clients}
     columns={['nome', 'telefone', 'email', 'data_evento']}
+    loading={loading}
+    error={error}
   />;
 }
 
 function Tasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   async function load() {
-    setTasks(await api<Task[]>('/crm/tasks'));
+    setError('');
+    try {
+      setTasks(await api<Task[]>('/crm/tasks'));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Nao foi possivel carregar tarefas.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -273,6 +312,8 @@ function Tasks() {
         icon={<ListChecks size={22} />}
         rows={tasks}
         columns={['status', 'titulo', 'prioridade', 'data_limite', 'lead_nome', 'cliente_nome']}
+        loading={loading}
+        error={error}
       />
       <form className="panel" onSubmit={submit}>
         <h2>Nova tarefa</h2>
@@ -327,8 +368,8 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
         </div>
         {message && <div className="alert success-box">{message}</div>}
         <div className="detail-grid">
-          <div className="metric"><span>Status</span><strong>{data.lead.status}</strong></div>
-          <div className="metric"><span>Evento</span><strong>{data.lead.data_evento || '-'}</strong></div>
+          <div className="metric"><span>Status</span><strong>{labelText(data.lead.status)}</strong></div>
+          <div className="metric"><span>Evento</span><strong>{formatDate(data.lead.data_evento)}</strong></div>
         </div>
         <label>Status do funil
           <select value={data.lead.status} onChange={(event) => updateStatus(event.target.value)}>
@@ -341,14 +382,14 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
         </div>
         <h3>Tarefas vinculadas</h3>
         {data.tarefas.length === 0 ? <div className="empty compact">Nenhuma tarefa vinculada.</div> : data.tarefas.map((task: any) => (
-          <article className="mini-card" key={task.id}><strong>{task.titulo}</strong><span>{task.status} · {task.prioridade}</span></article>
+          <article className="mini-card" key={task.id}><strong>{task.titulo}</strong><span>{labelText(task.status)} · {labelText(task.prioridade)}</span></article>
         ))}
       </aside>
     </div>
   );
 }
 
-function DataPanel({ title, subtitle, icon, rows, columns, onView }: { title: string; subtitle: string; icon: ReactNode; rows: any[]; columns: string[]; onView?: (row: any) => void }) {
+function DataPanel({ title, subtitle, icon, rows, columns, loading, error, onView }: { title: string; subtitle: string; icon: ReactNode; rows: any[]; columns: string[]; loading?: boolean; error?: string; onView?: (row: any) => void }) {
   return (
     <section className="panel wide">
       <div className="section-title">
@@ -358,12 +399,28 @@ function DataPanel({ title, subtitle, icon, rows, columns, onView }: { title: st
         </div>
         {icon}
       </div>
-      {rows.length === 0 ? <div className="empty">Nenhum registro encontrado.</div> : (
+      {error ? <div className="alert error">Nao foi possivel carregar esta lista. {error}</div> : loading ? <div className="loading-state">Carregando registros...</div> : rows.length === 0 ? <div className="empty">Nenhum registro encontrado. Use os atalhos da rotina para criar o primeiro cadastro.</div> : (
         <table>
           <thead><tr>{columns.map((column) => <th key={column}>{column.replaceAll('_', ' ')}</th>)}{onView && <th>Acoes</th>}</tr></thead>
-          <tbody>{rows.map((row) => <tr key={row.id}>{columns.map((column) => <td key={column}>{String(row[column] ?? '')}</td>)}{onView && <td><button className="secondary text-button" onClick={() => onView(row)}>Ver detalhes</button></td>}</tr>)}</tbody>
+          <tbody>{rows.map((row) => <tr key={row.id}>{columns.map((column) => <td key={column}>{formatCell(column, row[column])}</td>)}{onView && <td><button className="secondary text-button" onClick={() => onView(row)}>Ver detalhes</button></td>}</tr>)}</tbody>
         </table>
       )}
     </section>
   );
+}
+
+function formatCell(column: string, value: unknown) {
+  if (value == null || value === '') return <span className="muted-text">Nao informado</span>;
+  if (column.includes('status') || column.includes('prioridade')) return <span className="badge muted">{labelText(String(value))}</span>;
+  if (column.includes('data')) return formatDate(String(value));
+  return String(value);
+}
+
+function labelText(value: string) {
+  return String(value || '').replaceAll('_', ' ');
+}
+
+function formatDate(value?: string) {
+  if (!value) return 'Sem data';
+  return new Date(value).toLocaleDateString('pt-BR');
 }

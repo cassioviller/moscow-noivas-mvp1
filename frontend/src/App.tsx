@@ -66,6 +66,32 @@ const navItems: Array<{ key: PageKey; label: string; icon: ElementType; group: s
   { key: 'bloqueios-loja', label: 'Bloqueios da loja', icon: Store, group: 'Apoio' }
 ];
 
+const pageContext: Record<PageKey, string> = {
+  quick: 'Entrada rápida para novos contatos e próximas ações.',
+  dashboard: 'Central do dia com agenda, pendências e financeiro.',
+  kanban: 'Funil comercial das noivas em atendimento.',
+  leads: 'Lista completa de interessadas antes da conversão.',
+  clients: 'Clientes convertidas para locações e acompanhamento.',
+  tasks: 'Retornos, prioridades e prazos da equipe.',
+  products: 'Vestidos, categorias, status e ações principais.',
+  agenda: 'Provas, cabines, vendedoras e vestidos por horário.',
+  reservations: 'Reservas que bloqueiam disponibilidade de vestidos.',
+  rentals: 'Contratos, itens, retirada, devolução e caução.',
+  receivables: 'Parcelas, vencimentos, saldos e pagamentos.',
+  history: 'Histórico operacional dos atendimentos e locações.',
+  audit: 'Rastreabilidade de ações sensíveis no sistema.',
+  lgpd: 'Consentimentos, solicitações e retenção de dados.',
+  outbox: 'Eventos internos aguardando processamento.',
+  usuarios: 'Acessos, usuários ativos e segurança da loja.',
+  permissoes: 'Perfis e permissões por módulo.',
+  regras: 'Configurações e regras operacionais da loja.',
+  cadastros: 'Opções editáveis usadas em campos de dropdown.',
+  funcionarios: 'Equipe, atendentes e papéis operacionais.',
+  horarios: 'Janelas de atendimento por vendedora.',
+  'bloqueios-atendente': 'Indisponibilidades específicas da equipe.',
+  'bloqueios-loja': 'Bloqueios gerais da loja e agenda.'
+};
+
 export function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [page, setPage] = useState<PageKey>('dashboard');
@@ -134,6 +160,7 @@ export function App() {
           <div>
             <span className="eyebrow">Base MVP 1</span>
             <h1>{navItems.find((item) => item.key === page)?.label}</h1>
+            <p>{pageContext[page]}</p>
           </div>
           <div className="user-box">
             <span>{session.user.nome}</span>

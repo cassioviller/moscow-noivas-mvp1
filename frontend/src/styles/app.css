@@ -353,6 +353,12 @@ main {
   box-shadow: 0 12px 32px rgba(68, 47, 38, 0.05);
 }
 
+.topbar p {
+  max-width: 720px;
+  margin: 6px 0 0;
+  font-size: 13px;
+}
+
 .eyebrow {
   color: var(--color-primary);
   font-weight: 800;
@@ -534,6 +540,8 @@ tbody tr:last-child td {
   border-radius: 999px;
   font-size: 12px;
   font-weight: 800;
+  text-transform: capitalize;
+  white-space: nowrap;
 }
 
 .success {
@@ -544,6 +552,20 @@ tbody tr:last-child td {
 .muted {
   color: #6b6470;
   background: #ece8ea;
+}
+
+.warning-badge {
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
+}
+
+.danger-badge {
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+}
+
+.muted-text {
+  color: var(--color-soft-muted);
 }
 
 .alert.error,
@@ -578,6 +600,28 @@ tbody tr:last-child td {
   border: 1px dashed #d8c7be;
   color: var(--color-muted);
   background: linear-gradient(180deg, var(--color-surface) 0%, #fbf7f3 100%);
+}
+
+.loading-state {
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  color: var(--color-muted);
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.45), rgba(244, 229, 216, 0.42), rgba(255, 255, 255, 0.45)),
+    var(--color-surface);
+  background-size: 220% 100%;
+  animation: loading-sheen 1.5s ease-in-out infinite;
+}
+
+@keyframes loading-sheen {
+  0% {
+    background-position: 120% 0;
+  }
+
+  100% {
+    background-position: -120% 0;
+  }
 }
 
 .empty-state {
@@ -626,6 +670,9 @@ tbody tr:last-child td {
 .kanban-column h2 {
   font-size: 15px;
   text-transform: capitalize;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .lead-card,
@@ -642,6 +689,15 @@ tbody tr:last-child td {
   display: grid;
   gap: 6px;
   margin-bottom: 10px;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.lead-card:hover,
+.product-card:hover,
+.agenda-card:hover,
+.mini-card:hover {
+  border-color: color-mix(in oklch, var(--color-primary) 24%, var(--color-line));
+  box-shadow: var(--shadow-sm);
 }
 
 .lead-card[draggable='true'] {
@@ -688,6 +744,7 @@ tbody tr:last-child td {
 .product-card {
   display: grid;
   gap: 11px;
+  align-content: start;
 }
 
 .product-card h3 {
@@ -726,6 +783,10 @@ tbody tr:last-child td {
   border-radius: var(--radius-lg);
   padding: 14px;
   background: var(--color-surface);
+}
+
+.agenda-card p {
+  margin-bottom: 4px;
 }
 
 .agenda-layout {
@@ -839,6 +900,11 @@ tbody tr:last-child td {
   font-weight: 600;
 }
 
+.multi-picker input[type="checkbox"],
+.check-row input[type="checkbox"] {
+  accent-color: var(--color-primary);
+}
+
 .multi-picker small {
   grid-column: 2;
 }
@@ -866,6 +932,10 @@ tbody tr:last-child td {
   border-radius: 999px;
   padding: 7px 10px;
   font-size: 12px;
+}
+
+.wizard-steps span {
+  font-weight: 800;
 }
 
 .tabs button {
@@ -906,6 +976,10 @@ tbody tr:last-child td {
 .inline-form input,
 .inline-form select {
   flex: 1 1 120px;
+}
+
+.inline-form button {
+  flex: 0 0 auto;
 }
 
 .modal-backdrop {
@@ -1310,6 +1384,10 @@ tbody tr:last-child td {
   .topbar {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .topbar p {
+    max-width: none;
   }
 
   .user-box {

@@ -32,6 +32,16 @@ type Task = {
   cliente_nome?: string;
 };
 
+type CadastroOpcao = {
+  id: string;
+  modulo: string;
+  campo: string;
+  valor: string;
+  rotulo: string;
+  ordem: number;
+  ativo: boolean;
+};
+
 const funnelStatuses = ['novo', 'em_contato', 'prova_marcada', 'compareceu', 'em_negociacao', 'sem_retorno', 'fechado', 'perdido'];
 
 export function CrmPage({ mode }: { mode: 'quick' | 'kanban' | 'leads' | 'clients' | 'tasks' }) {
@@ -46,6 +56,11 @@ function QuickLead() {
   const [message, setMessage] = useState('');
   const [duplicates, setDuplicates] = useState<Lead[]>([]);
   const [error, setError] = useState('');
+  const [interestOptions, setInterestOptions] = useState<CadastroOpcao[]>([]);
+
+  useEffect(() => {
+    api<CadastroOpcao[]>('/settings/options?modulo=crm&campo=interesse').then(setInterestOptions).catch(console.error);
+  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -85,7 +100,14 @@ function QuickLead() {
         <label>Nome<input name="nome" required /></label>
         <label>Telefone<input name="telefone" required /></label>
         <label>Data do casamento/evento<input name="data_evento" type="date" /></label>
-        <label>Interesse<input name="interesse" placeholder="Vestido de noiva, festa, acessorio..." /></label>
+        <label>Interesse
+          <select name="interesse">
+            <option value="">Selecione</option>
+            {interestOptions.filter((option) => option.ativo).map((option) => (
+              <option key={option.id} value={option.rotulo}>{option.rotulo}</option>
+            ))}
+          </select>
+        </label>
         {error && <div className="alert warning">{error}</div>}
         {message && <div className="alert success-box">{message}</div>}
         {duplicates.length > 0 && (

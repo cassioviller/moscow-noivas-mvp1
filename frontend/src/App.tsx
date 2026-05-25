@@ -1,4 +1,4 @@
-import { Banknote, CalendarDays, CalendarX, ChevronsLeft, ChevronsRight, Clock, Database, HeartHandshake, Home, LayoutGrid, ListChecks, LogOut, Receipt, ScrollText, Settings, ShieldAlert, ShieldCheck, Shirt, Store, UserCog, UserRoundPlus, Users, Workflow } from 'lucide-react';
+import { Banknote, CalendarDays, CalendarX, ChevronsLeft, ChevronsRight, Clock, Database, HeartHandshake, Home, LayoutGrid, ListChecks, LogOut, Receipt, ScrollText, Search, Settings, ShieldAlert, ShieldCheck, Shirt, Store, UserCog, UserRoundPlus, Users, Workflow } from 'lucide-react';
 import type { ElementType } from 'react';
 import { useEffect, useState } from 'react';
 import type { Session } from './api';
@@ -107,6 +107,8 @@ export function App() {
   }
 
   const groups = Array.from(new Set(navItems.map((item) => item.group)));
+  const activeItem = navItems.find((item) => item.key === page);
+  const ActiveIcon = activeItem?.icon ?? Home;
 
   return (
     <div className={`shell ${menuCollapsed ? 'nav-collapsed' : ''}`}>
@@ -115,7 +117,7 @@ export function App() {
           <span className="brand-mark">MN</span>
           <div>
             <strong>Moscow Noivas</strong>
-            <small>Gestão da loja</small>
+            <small>Atelier operacional</small>
           </div>
           <button
             className="collapse-button"
@@ -157,24 +159,33 @@ export function App() {
 
       <main>
         <header className="topbar">
-          <div>
+          <div className="topbar-heading">
             <span className="eyebrow">Base MVP 1</span>
-            <h1>{navItems.find((item) => item.key === page)?.label}</h1>
+            <div className="topbar-title-row">
+              <span className="topbar-page-icon"><ActiveIcon size={20} /></span>
+              <h1>{activeItem?.label}</h1>
+            </div>
             <p>{pageContext[page]}</p>
           </div>
-          <div className="user-box">
-            <span>{session.user.nome}</span>
-            <button
-              className="icon-button"
-              aria-label="Sair"
-              title="Sair"
-              onClick={() => {
-                localStorage.clear();
-                setSession(null);
-              }}
-            >
-              <LogOut size={18} />
-            </button>
+          <div className="topbar-actions">
+            <div className="command-chip" aria-label="Busca visual">
+              <Search size={15} />
+              <span>Buscar noivas, vestidos, locações</span>
+            </div>
+            <div className="user-box">
+              <span>{session.user.nome}</span>
+              <button
+                className="icon-button"
+                aria-label="Sair"
+                title="Sair"
+                onClick={() => {
+                  localStorage.clear();
+                  setSession(null);
+                }}
+              >
+                <LogOut size={18} />
+              </button>
+            </div>
           </div>
         </header>
 

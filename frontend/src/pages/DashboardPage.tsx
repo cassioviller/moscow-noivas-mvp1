@@ -1,4 +1,4 @@
-import { AlertTriangle, Banknote, CalendarDays, CheckCircle2, HeartHandshake, Receipt, Sparkles } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Banknote, CalendarDays, CheckCircle2, Clock3, HeartHandshake, Receipt, Sparkles } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { api } from '../api';
@@ -18,10 +18,11 @@ export function DashboardPage({ onNavigate }: { onNavigate?: (page: DashboardPag
 
   if (error) {
     return (
-      <section className="panel empty-state">
-        <AlertTriangle size={28} />
-        <h2>Sessao precisa ser renovada</h2>
-        <p>{error}. Entre novamente para atualizar as permissoes da demo.</p>
+      <section className="panel empty-state dashboard-state">
+        <span className="state-icon danger-badge"><AlertTriangle size={28} /></span>
+        <span className="eyebrow">Dashboard indisponível</span>
+        <h2>Sessão precisa ser renovada</h2>
+        <p>{error}. Entre novamente para atualizar as permissões da demo e carregar a rotina da loja.</p>
         <button
           className="primary"
           onClick={() => {
@@ -38,16 +39,16 @@ export function DashboardPage({ onNavigate }: { onNavigate?: (page: DashboardPag
   if (!data) {
     return (
       <section className="dashboard">
-        <section className="dashboard-hero">
+        <section className="dashboard-hero dashboard-loading">
           <div>
             <span className="eyebrow">Preparando a rotina</span>
-            <h2>Carregando a central do dia</h2>
-            <p>Buscando agenda, pendências, noivas em andamento e financeiro.</p>
+            <h2>Carregando o que precisa de atenção hoje</h2>
+            <p>Buscando agenda, pendências, noivas em andamento, contas a receber e retiradas próximas.</p>
           </div>
           <div className="hero-metrics">
-            <div className="metric-card"><span>Agenda</span><strong>...</strong></div>
-            <div className="metric-card"><span>Noivas</span><strong>...</strong></div>
-            <div className="metric-card"><span>Financeiro</span><strong>...</strong></div>
+            <div className="metric-card loading-card"><span>Agenda</span><strong>...</strong></div>
+            <div className="metric-card loading-card"><span>Pendências</span><strong>...</strong></div>
+            <div className="metric-card loading-card"><span>Financeiro</span><strong>...</strong></div>
           </div>
         </section>
       </section>
@@ -55,54 +56,90 @@ export function DashboardPage({ onNavigate }: { onNavigate?: (page: DashboardPag
   }
 
   const critical = data.gerente.pendencias_criticas + data.financeiro.caucoes_em_aberto;
+  const todayLabel = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
+  const nextAgenda = data.listas.agenda_hoje?.[0];
+  const focusMessage = critical > 0
+    ? 'Comece pelas pendências críticas antes de abrir novos atendimentos.'
+    : nextAgenda
+      ? 'Comece conferindo a próxima prova e os recursos reservados.'
+      : 'Dia tranquilo: revise oportunidades e mantenha o financeiro em dia.';
 
   return (
     <section className="dashboard">
       <section className="dashboard-hero">
-        <div>
-          <span className="eyebrow">Moscow Noivas MVP 1</span>
-          <h2>Rotina da loja organizada para hoje</h2>
-          <p>Atendimentos, provas, locações, dinheiro a receber e pendências críticas em uma visão única para demonstração.</p>
+        <div className="hero-copy">
+          <span className="eyebrow">Central do dia</span>
+          <h2>O que precisa de atenção hoje?</h2>
+          <p>{focusMessage}</p>
           <div className="dashboard-actions">
             <button className="primary" onClick={() => onNavigate?.('agenda')}><CalendarDays size={16} /> Abrir agenda</button>
             <button className="secondary text-button" onClick={() => onNavigate?.('quick')}><HeartHandshake size={16} /> Novo atendimento</button>
             <button className="secondary text-button" onClick={() => onNavigate?.('receivables')}><Banknote size={16} /> Ver financeiro</button>
           </div>
         </div>
-        <div className="hero-metrics">
-          <MetricCard label="Agenda hoje" value={data.gerente.agendamentos_hoje} icon={CalendarDays} tone="primary" />
-          <MetricCard label="Locações mês" value={data.gerente.locacoes_mes} icon={Receipt} tone="soft" />
-          <MetricCard label="Pendências" value={critical} icon={AlertTriangle} tone={critical > 0 ? 'warn' : 'ok'} />
+        <div className="hero-command-center">
+          <div className="today-card">
+            <span>Hoje no atelier</span>
+            <strong>{todayLabel}</strong>
+            <p>{nextAgenda ? `Próximo atendimento: ${time(nextAgenda.inicio_at)} com ${nextAgenda.pessoa_nome}.` : 'Nenhum atendimento urgente para iniciar o dia.'}</p>
+          </div>
+          <div className="hero-metrics">
+            <MetricCard label="Agenda hoje" value={data.gerente.agendamentos_hoje} icon={CalendarDays} tone="primary" />
+            <MetricCard label="Locações mês" value={data.gerente.locacoes_mes} icon={Receipt} tone="soft" />
+            <MetricCard label="Pendências" value={critical} icon={AlertTriangle} tone={critical > 0 ? 'warn' : 'ok'} />
+          </div>
         </div>
       </section>
 
-      <section className="operations-strip" aria-label="Indicadores operacionais">
-        <CompactSignal label="Leads novos" value={data.gerente.leads_novos} icon={<HeartHandshake size={18} />} />
-        <CompactSignal label="Próximas provas" value={data.vendedora.proximas_provas} icon={<CheckCircle2 size={18} />} />
-        <CompactSignal label="Parcelas vencidas" value={data.financeiro.parcelas_vencidas} icon={<Banknote size={18} />} tone={data.financeiro.parcelas_vencidas > 0 ? 'warn' : 'ok'} />
-        <CompactSignal label="Cauções abertas" value={data.financeiro.caucoes_em_aberto} icon={<Banknote size={18} />} tone={data.financeiro.caucoes_em_aberto > 0 ? 'warn' : 'ok'} />
-        <CompactSignal label="Retiradas próximas" value={data.financeiro.retiradas_proximas} icon={<Receipt size={18} />} />
-        <CompactSignal label="Conflitos evitados" value={data.gerente.conflitos_evitados} icon={<Sparkles size={18} />} />
+      <section className="dashboard-attention-grid">
+        <article className={`priority-panel ${critical > 0 ? 'priority-warn' : 'priority-ok'}`}>
+          <div>
+            <span className="eyebrow">Foco imediato</span>
+            <h2>{critical > 0 ? 'Pendências pedem atenção' : 'Operação sem alerta crítico'}</h2>
+            <p>{critical > 0 ? 'Revise parcelas, cauções e tarefas antes de avançar com novos atendimentos.' : 'A loja pode seguir o fluxo do dia com tranquilidade.'}</p>
+          </div>
+          <strong>{critical}</strong>
+        </article>
+        <article className="next-appointment-card">
+          <span className="eyebrow">Próximo compromisso</span>
+          <div className="next-time">
+            <Clock3 size={20} />
+            <strong>{nextAgenda ? time(nextAgenda.inicio_at) : 'Livre'}</strong>
+          </div>
+          <p>{nextAgenda ? `${nextAgenda.pessoa_nome} · ${label(nextAgenda.tipo)} · ${nextAgenda.sala_nome || 'sem cabine'}` : 'Não há prova urgente na agenda de hoje.'}</p>
+        </article>
+        <button className="priority-action" onClick={() => onNavigate?.('agenda')}>
+          <span>
+            <small>Próximo passo recomendado</small>
+            <strong>Conferir agenda e cabines</strong>
+          </span>
+          <ArrowRight size={20} />
+        </button>
       </section>
 
-      <section className="dashboard-columns">
+      <section className="dashboard-day-grid">
         <DashboardList
+          accent="agenda"
           title="Agenda de hoje"
           subtitle="Provas e atendimentos do dia"
-          empty="Nenhum atendimento marcado para hoje."
+          empty="Nenhum atendimento marcado para hoje. Use a agenda para reservar cabine, vendedora e vestidos quando chegar uma nova noiva."
           rows={data.listas.agenda_hoje}
           render={(row) => (
             <>
-              <strong>{time(row.inicio_at)} · {row.pessoa_nome}</strong>
+              <div className="dashboard-row-main">
+                <span className="time-pill">{time(row.inicio_at)}</span>
+                <strong>{row.pessoa_nome}</strong>
+              </div>
               <span>{label(row.tipo)} com {row.atendente_nome || 'atendente a definir'} · {row.sala_nome || 'sem cabine'}</span>
               <small>{row.vestido_nome || 'Sem vestido definido'} · {label(row.status)}</small>
             </>
           )}
         />
         <DashboardList
-          title="Pendências comerciais"
-          subtitle="Tarefas e retornos importantes"
-          empty="Nenhuma tarefa pendente."
+          accent={critical > 0 ? 'warn' : 'ok'}
+          title="Pendências críticas"
+          subtitle="Tarefas, cauções e retornos importantes"
+          empty="Nenhuma pendência crítica. A equipe pode seguir o fluxo de atendimento com calma."
           rows={data.listas.tarefas}
           render={(row) => (
             <>
@@ -116,8 +153,9 @@ export function DashboardPage({ onNavigate }: { onNavigate?: (page: DashboardPag
 
       <section className="dashboard-columns">
         <DashboardList
+          accent="bride"
           title="Noivas em andamento"
-          subtitle="Leads para demonstrar o funil"
+          subtitle="Relacionamentos que ainda precisam de acompanhamento"
           empty="Nenhuma noiva cadastrada ainda. Comece pelo Atendimento Rápido."
           rows={data.listas.noivas}
           render={(row) => (
@@ -129,6 +167,7 @@ export function DashboardPage({ onNavigate }: { onNavigate?: (page: DashboardPag
           )}
         />
         <DashboardList
+          accent={data.financeiro.parcelas_vencidas > 0 ? 'warn' : 'money'}
           title="Dinheiro a receber"
           subtitle="Parcelas abertas e vencidas"
           empty="Tudo em dia por aqui."
@@ -145,6 +184,7 @@ export function DashboardPage({ onNavigate }: { onNavigate?: (page: DashboardPag
 
       <section className="dashboard-columns">
         <DashboardList
+          accent="delivery"
           title="Retiradas e devoluções próximas"
           subtitle="Operação dos próximos dias"
           empty="Nenhuma retirada ou devolução próxima."
@@ -158,6 +198,7 @@ export function DashboardPage({ onNavigate }: { onNavigate?: (page: DashboardPag
           )}
         />
         <DashboardList
+          accent="contract"
           title="Locações recentes"
           subtitle="Contratos para apresentar no protótipo"
           empty="Nenhuma locação criada ainda."
@@ -171,6 +212,15 @@ export function DashboardPage({ onNavigate }: { onNavigate?: (page: DashboardPag
           )}
         />
       </section>
+
+      <section className="operations-strip" aria-label="Indicadores operacionais">
+        <CompactSignal label="Leads novos" value={data.gerente.leads_novos} icon={<HeartHandshake size={18} />} />
+        <CompactSignal label="Próximas provas" value={data.vendedora.proximas_provas} icon={<CheckCircle2 size={18} />} />
+        <CompactSignal label="Parcelas vencidas" value={data.financeiro.parcelas_vencidas} icon={<Banknote size={18} />} tone={data.financeiro.parcelas_vencidas > 0 ? 'warn' : 'ok'} />
+        <CompactSignal label="Cauções abertas" value={data.financeiro.caucoes_em_aberto} icon={<Banknote size={18} />} tone={data.financeiro.caucoes_em_aberto > 0 ? 'warn' : 'ok'} />
+        <CompactSignal label="Retiradas próximas" value={data.financeiro.retiradas_proximas} icon={<Receipt size={18} />} />
+        <CompactSignal label="Conflitos evitados" value={data.gerente.conflitos_evitados} icon={<Sparkles size={18} />} />
+      </section>
     </section>
   );
 }
@@ -178,7 +228,7 @@ export function DashboardPage({ onNavigate }: { onNavigate?: (page: DashboardPag
 function MetricCard({ label, value, icon: Icon, tone }: { label: string; value: number; icon: any; tone?: 'primary' | 'soft' | 'warn' | 'ok' }) {
   return (
     <article className={`metric-card ${tone ? `metric-${tone}` : ''}`}>
-      <Icon size={18} />
+      <span className="metric-icon"><Icon size={18} /></span>
       <span>{label}</span>
       <strong>{value}</strong>
     </article>
@@ -195,14 +245,15 @@ function CompactSignal({ label, value, icon, tone }: { label: string; value: num
   );
 }
 
-function DashboardList({ title, subtitle, rows, render, empty }: { title: string; subtitle: string; rows: any[]; render: (row: any) => ReactNode; empty: string }) {
+function DashboardList({ title, subtitle, rows, render, empty, accent }: { title: string; subtitle: string; rows: any[]; render: (row: any) => ReactNode; empty: string; accent?: string }) {
   return (
-    <section className="panel dashboard-list">
+    <section className={`panel dashboard-list ${accent ? `dashboard-list-${accent}` : ''}`}>
       <div className="section-title">
         <div>
           <h2>{title}</h2>
           <p>{subtitle}</p>
         </div>
+        <span className="list-count">{rows.length}</span>
       </div>
       {rows.length === 0 ? <div className="empty compact">{empty}</div> : (
         <div className="stack">
